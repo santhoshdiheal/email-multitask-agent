@@ -93,13 +93,13 @@ class LocalSummarizer:
             self.model = base_model
         self.model.eval()
 
-    def _generate(self, messages):
+    def _generate(self, messages, max_new_tokens=None):
         prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
         with torch.no_grad():
             output = self.model.generate(
                 **inputs,
-                max_new_tokens=self.max_new_tokens,
+                max_new_tokens=max_new_tokens or self.max_new_tokens,
                 temperature=0.2,
                 top_p=0.9,
                 do_sample=True,
@@ -108,6 +108,9 @@ class LocalSummarizer:
         generated = output[0][inputs["input_ids"].shape[-1]:]
         text = self.tokenizer.decode(generated, skip_special_tokens=True)
         return text.strip()
+
+    def generate(self, messages, max_new_tokens=None) -> str:
+        return self._generate(messages, max_new_tokens=max_new_tokens)
 
     def summarize(self, subject: str, body: str) -> str:
         messages = _build_messages(subject, body)

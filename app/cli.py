@@ -6,6 +6,8 @@ import typer
 
 from app.cleaner import clean_email_text
 from app.summarizer import LocalSummarizer
+from app.task_router import SUPPORTED_TASKS, run_task
+from configs.task_prompts import DEFAULT_CATEGORIES
 
 
 DEFAULT_MODEL = os.getenv(
@@ -19,10 +21,27 @@ def summarize(
     subject: str = typer.Option("(no subject)", help="Email subject"),
     file: Path = typer.Option(None, exists=True, file_okay=True, dir_okay=False, help="Path to email text file"),
     text: str = typer.Option(None, help="Email body as text"),
+    task: str = typer.Option(
+        "summarize",
+        help=f"Task to perform. Options: {', '.join(sorted(SUPPORTED_TASKS))}",
+        case_sensitive=False,
+    ),
+    tone: str = typer.Option("neutral", help="Tone for replies (e.g., neutral, friendly, direct)"),
+    style: str = typer.Option("professional", help="Rewrite style (professional, friendly, short)"),
+    length: str = typer.Option("short", help="Target length for replies (short, medium, long)"),
+    categories: list[str] = typer.Option(
+        DEFAULT_CATEGORIES,
+        help="Category labels for auto-categorize. Provide multiple to override defaults.",
+    ),
+    attachments: list[str] = typer.Option(
+        [],
+        "--attachment",
+        help="Attachment names/types for attachment analysis (repeat per file).",
+    ),
     adapter_path: str = typer.Option(DEFAULT_ADAPTER, help="LoRA adapter directory"),
     model_name: str = typer.Option(DEFAULT_MODEL, help="Base model name"),
 ):
-    """Summarize an email into exactly 5 lines."""
+    """Run summarization or other email tasks."""
     body = text or (file.read_text(encoding="utf-8") if file else None)
     if body is None:
         if sys.stdin.isatty():
@@ -35,9 +54,24 @@ def summarize(
     clean_body, _ = clean_email_text("", body)
 
     summarizer = LocalSummarizer(model_name=model_name, adapter_path=adapter_path)
-    summary = summarizer.summarize(subject=subject, body=clean_body)
-    typer.echo("\n--- Summary ---")
-    typer.echo(summary)
+    try:
+        output = run_task(
+            summarizer,
+            task=task,
+            subject=subject,
+            body=clean_body,
+            tone=tone,
+            style=style,
+            length=length,
+            categories=categories,
+            attachments=attachments,
+        )
+    except NotImplementedError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(f"\n--- {task.capitalize()} ---")
+    typer.echo(output)
 
 
 def main():

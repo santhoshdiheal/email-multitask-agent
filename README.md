@@ -88,6 +88,28 @@ python -m app.cli --text "Please sign the doc by Friday"
 
 # File input:
 python -m app.cli --file sample_email.txt
+
+# Multi-task examples:
+# Summarize (default):
+python -m app.cli --text "Please sign the doc by Friday" --task summarize
+
+# Draft a reply:
+python -m app.cli --text "Can you send the report?" --task reply --tone friendly --length short
+
+# Rewrite in a different style:
+python -m app.cli --text "pls send details asap" --task rewrite --style professional
+
+# Phishing detection:
+python -m app.cli --text "Urgent: update your password at http://bad.link" --task phishing
+
+# Spam classification:
+python -m app.cli --text "Win a free iPhone now!" --task spam
+
+# Auto-categorize with custom labels:
+python -m app.cli --text "Invoice attached for April" --task categorize --categories Billing --categories Finance
+
+# Attachment analysis (metadata-focused):
+python -m app.cli --text "See attached Q1_report.pdf" --task attachment --attachment Q1_report.pdf --attachment invoice.xlsx
 ```
 You can override paths via env vars: `SUMMARY_MODEL_NAME` and `SUMMARY_ADAPTER_PATH`.
 Output always 5 lines:
@@ -109,6 +131,7 @@ Output always 5 lines:
 - Add task-specific prompts for: summarize, generate reply, rewrite (professional/friendly/short), phishing detection, spam classification, auto-categorize, smart search (with embeddings), and attachment metadata analysis.
 - Use `notebooks/02_label_multitask.ipynb` to bootstrap synthetic labels with a local/hosted teacher (e.g., Ollama `qwen2.5:7b-instruct`).
 - Train a small QLoRA adapter on the multi-task mix (`notebooks/03_train_multitask_qlora.ipynb`) for free Kaggle/Colab GPUs.
+- Smart search note: requires building an embedding index (e.g., `all-MiniLM-L6-v2` + FAISS). The CLI stub will warn until an index is wired.
 
 ## Troubleshooting
 - CUDA OOM: lower `--max_seq_length` (2048→1536→1024), increase `--grad_accum_steps`, or set `CUDA_VISIBLE_DEVICES=""` to force CPU (slow). Restart notebook/kernel to release VRAM.
